@@ -117,10 +117,6 @@ const productSchema = new mongoose.Schema(
   }
 );
 
-productSchema.index({ "auction.endTime": 1 });
-productSchema.index({ "auction.startTime": 1 });
-productSchema.index({ status: 1 });
-
 const Product = mongoose.model("Product", productSchema);
 
 module.exports = Product;
