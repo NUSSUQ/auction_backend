@@ -165,8 +165,6 @@ router.put("/admin/edit-product/:id", async (req, res) => {
       productVideos,
     } = req.body;
 
-    console.log("req.body:", req.body);
-
     // Find the product by ID
     let product = await Product.findById(productId);
 
@@ -222,7 +220,9 @@ router.put("/admin/edit-product/:id", async (req, res) => {
       });
     }
     if (editedVideos.length > 0) {
-      product.videos = editedVideos.map((vid) => vid.url);
+      product.videos = editedVideos.map((vid) => {
+        return { url: vid.url, public_id: vid.public_id };
+      });
     }
 
     product.auction = {
@@ -275,6 +275,7 @@ router.put("/admin/edit-product/:id", async (req, res) => {
     });
   }
 });
+
 
 // Route to delete a product
 router.post("/admin/delete-product/:id", async (req, res) => {

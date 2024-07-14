@@ -83,12 +83,40 @@ cloudinary.config({
   secure: true,
 });
 
+const createAdminUser = async () => {
+  try {
+    // Check if admin user already exists
+    const existingUser = await User.findOne({ email: "admin@gmail.com" });
+    if (existingUser) {
+      console.log("Admin user already exists.");
+      return;
+    }
+
+    // Create admin user
+    const newUser = new User({
+      username: "admin",
+      email: "admin@gmail.com",
+      password: "12345678",
+      storeName: "Admin Store",
+      storeUrl: "http://adminstore.com",
+    });
+
+    await newUser.save();
+    console.log("Admin user created successfully.");
+  } catch (error) {
+    console.error("Error creating admin user:", error);
+  }
+};
+
 // Start the server
-const PORT = process.env.PORT || 3000;
+const PORT = 8000;
 app.listen(PORT, async () => {
+  
   console.log(`Server is running on http://localhost:${PORT}/`);
   // Connect to the database
   connectDB();
+  
+  // await createAdminUser();
 });
 
 module.exports = app;
