@@ -25,11 +25,11 @@ const bidSchema = new mongoose.Schema({
     },
     depositReceipt: {
       url: {
-        required: [true, "depositReceipt url is required"],
+        // required: [true, "depositReceipt url is required"],
         type: String,
       },
       public_id: {
-        required: [true, "depositReceipt public_id is required"],
+        // required: [true, "depositReceipt public_id is required"],
         type: String,
       },
     },
