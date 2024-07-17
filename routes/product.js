@@ -104,6 +104,23 @@ router.post("/admin/create-product", async (req, res) => {
       status: "available",
     });
 
+    // Get the current date and time
+    const now = new Date();
+
+    // Check the auction times and update the product status
+    if (auctionEndTime && new Date(auctionEndTime) < now) {
+      newProduct.status = "unavailable";
+    } else if (auctionStartTime && new Date(auctionStartTime) > now) {
+      newProduct.status = "upcoming";
+    } else if (
+      auctionStartTime &&
+      new Date(auctionStartTime) <= now &&
+      auctionEndTime &&
+      new Date(auctionEndTime) >= now
+    ) {
+      newProduct.status = "available";
+    }
+
     await newProduct.save();
 
     res.status(201).json({
@@ -356,53 +373,53 @@ router.post("/add-bid/:id", async (req, res) => {
       });
     }
 
-    let depositReceiptImage = {};
-    if (image) {
-      const uploadResponse = await cloudinary.uploader.upload(image, {
-        folder: "bidder_receipts",
-      });
-      depositReceiptImage = {
-        url: uploadResponse.secure_url,
-        public_id: uploadResponse.public_id,
-      };
-    }
+    // let depositReceiptImage = {};
+    // if (image) {
+    //   const uploadResponse = await cloudinary.uploader.upload(image, {
+    //     folder: "bidder_receipts",
+    //   });
+    //   depositReceiptImage = {
+    //     url: uploadResponse.secure_url,
+    //     public_id: uploadResponse.public_id,
+    //   };
+    // }
 
     const bidderInfo = {
       fullName,
       phoneNumber,
       email,
-      depositReceipt: depositReceiptImage,
+      // depositReceipt: depositReceiptImage,
     };
 
-    if (product.bidHistory.length >= 1) {
-      // Send email to previous bidders
-      const previousBidders = product.bidHistory.map(
-        (bid) => bid.bidderInfo.email
-      );
-      const emailSubject = `New Bid Added for ${product.name}`;
-      const emailHTML = `
-      <p>Hello,</p>
-      <p>A new bid has been added for ${product.name}.</p>
-      <p>Details:</p>
-      <ul>
-        <li>Bidder Name: ${fullName}</li>
-        <li>Bid Price: ${price}</li>
-        <li>Link Price: ${process.env.FRONTEND_LINK}/products/${product._id}</li>
-      </ul>
-      <p>Thank you!</p>
-    `;
+    // if (product.bidHistory.length >= 1) {
+    //   // Send email to previous bidders
+    //   const previousBidders = product.bidHistory.map(
+    //     (bid) => bid.bidderInfo.email
+    //   );
+    //   const emailSubject = `New Bid Added for ${product.name}`;
+    //   const emailHTML = `
+    //   <p>Hello,</p>
+    //   <p>A new bid has been added for ${product.name}.</p>
+    //   <p>Details:</p>
+    //   <ul>
+    //     <li>Bidder Name: ${fullName}</li>
+    //     <li>Bid Price: ${price}</li>
+    //     <li>Link Price: ${process.env.FRONTEND_LINK}/products/${product._id}</li>
+    //   </ul>
+    //   <p>Thank you!</p>
+    // `;
 
-      // Send emails to previous bidders
-      const mailOptions = {
-        from: process.env.NODEMAILER_EMAIL,
-        to: previousBidders.join(", "),
-        subject: emailSubject,
-        html: emailHTML,
-      };
+    //   // Send emails to previous bidders
+    //   const mailOptions = {
+    //     from: process.env.NODEMAILER_EMAIL,
+    //     to: previousBidders.join(", "),
+    //     subject: emailSubject,
+    //     html: emailHTML,
+    //   };
 
-      // Send email using the transporter
-      await transporter.sendMail(mailOptions);
-    }
+    //   // Send email using the transporter
+    //   await transporter.sendMail(mailOptions);
+    // }
     
     // Add new bid to bidHistory
     product.bidHistory.push({ price, bidderInfo });

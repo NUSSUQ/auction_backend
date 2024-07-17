@@ -16,13 +16,12 @@ const app = express();
 
 app.use(cors());
 
-app.use(bodyParser.json({ limit: "60mb" }));
-app.use(bodyParser.urlencoded({ limit: "60mb", extended: true }));
+app.use(bodyParser.json({ limit: "50mb" }));
+app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
 
 // Middleware for parsing request bodies
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-
 
 const getProductsData = async () => {
   try {
@@ -109,13 +108,12 @@ const createAdminUser = async () => {
 };
 
 // Start the server
-const PORT = process.env.PORT || 3000;
+const PORT = 8000;
 app.listen(PORT, async () => {
-  
   console.log(`Server is running on http://localhost:${PORT}/`);
   // Connect to the database
   connectDB();
-  
+
   // await createAdminUser();
 });
 
