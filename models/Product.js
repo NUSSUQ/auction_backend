@@ -17,7 +17,7 @@ const bidSchema = new mongoose.Schema({
     },
     email: {
       type: String,
-      required: [true, "Email is required"],
+      // required: [true, "Email is required"],
       validate: {
         validator: validator.isEmail,
         message: (props) => `${props.value} is not a valid email!`,
