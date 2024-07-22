@@ -11,6 +11,7 @@ cloudinary.config({
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
+
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
@@ -41,11 +42,11 @@ router.post("/admin/create-product", async (req, res) => {
       productName,
       productDescription,
       productPrice,
-      auctionStartingBid,
       auctionStartTime,
       auctionEndTime,
       productImages, // Assuming base64 strings array for images
       productVideos, // Assuming base64 strings array for videos
+      allowedBidAmounts,
     } = req.body;
 
     // Verify token and find user
@@ -60,10 +61,8 @@ router.post("/admin/create-product", async (req, res) => {
     let uploadedImages = [];
     let uploadedVideos = [];
 
-    // Function to upload files to Cloudinary and collect URLs
     const uploadFiles = async (files, type) => {
       const uploaded = [];
-
       for (let file of files) {
         const uploadedFile = await cloudinary.uploader.upload(file, {
           resource_type: type === "image" ? "image" : "video",
@@ -74,40 +73,33 @@ router.post("/admin/create-product", async (req, res) => {
           public_id: uploadedFile.public_id,
         });
       }
-      console.log(uploaded);
       return uploaded;
     };
 
-    // Upload images
     if (productImages && productImages.length > 0) {
       uploadedImages = await uploadFiles(productImages, "image");
     }
 
-    // Upload videos
     if (productVideos && productVideos.length > 0) {
       uploadedVideos = await uploadFiles(productVideos, "video");
     }
 
-    // Create new product object with Cloudinary URLs
     const newProduct = new Product({
       name: productName,
       description: productDescription,
       price: productPrice,
       images: uploadedImages,
       videos: uploadedVideos,
-      user: user._id, // Assuming user._id is ObjectId
+      user: user._id,
       auction: {
-        startingBid: auctionStartingBid,
         startTime: auctionStartTime,
         endTime: auctionEndTime,
       },
       status: "available",
+      allowedBidAmounts: allowedBidAmounts || [500, 1000],
     });
 
-    // Get the current date and time
     const now = new Date();
-
-    // Check the auction times and update the product status
     if (auctionEndTime && new Date(auctionEndTime) < now) {
       newProduct.status = "unavailable";
     } else if (auctionStartTime && new Date(auctionStartTime) > now) {
@@ -175,11 +167,11 @@ router.put("/admin/edit-product/:id", async (req, res) => {
       productName: name,
       productDescription: description,
       productPrice: price,
-      auctionStartingBid,
       auctionStartTime,
       auctionEndTime,
       productImages,
       productVideos,
+      allowedBidAmounts,
     } = req.body;
 
     // Find the product by ID
@@ -243,10 +235,14 @@ router.put("/admin/edit-product/:id", async (req, res) => {
     }
 
     product.auction = {
-      startingBid: auctionStartingBid,
       startTime: auctionStartTime,
       endTime: auctionEndTime,
     };
+
+    // Update allowed bid amounts if provided
+    if (allowedBidAmounts && allowedBidAmounts.length > 0) {
+      product.allowedBidAmounts = allowedBidAmounts;
+    }
 
     // Get the current date and time
     const now = new Date();
@@ -265,18 +261,18 @@ router.put("/admin/edit-product/:id", async (req, res) => {
       product.status = "available";
     }
 
-    // Save the updated product
-    await product.save();
-
     // Delete old images if new images are uploaded
     if (editedImages.length > 0 && oldImages.length > 0) {
-      deleteFiles(oldImages); // Assuming a function to delete files
+      await deleteFiles(oldImages); // Assuming a function to delete files
     }
 
     // Delete old videos if new videos are uploaded
     if (editedVideos.length > 0 && oldVideos.length > 0) {
-      deleteFiles(oldVideos); // Assuming a function to delete files
+      await deleteFiles(oldVideos); // Assuming a function to delete files
     }
+
+    // Save the updated product
+    await product.save();
 
     res.status(200).json({
       status: "success",
@@ -292,7 +288,6 @@ router.put("/admin/edit-product/:id", async (req, res) => {
     });
   }
 });
-
 
 // Route to delete a product
 router.post("/admin/delete-product/:id", async (req, res) => {
@@ -373,60 +368,67 @@ router.post("/add-bid/:id", async (req, res) => {
       });
     }
 
-    // let depositReceiptImage = {};
-    // if (image) {
-    //   const uploadResponse = await cloudinary.uploader.upload(image, {
-    //     folder: "bidder_receipts",
-    //   });
-    //   depositReceiptImage = {
-    //     url: uploadResponse.secure_url,
-    //     public_id: uploadResponse.public_id,
-    //   };
-    // }
+    // Check if the bid amount is allowed
+    if (!product.allowedBidAmounts.includes(price)) {
+      return res.status(400).json({
+        status: "fail",
+        message: `Bid amount must be one of the following: ${product.allowedBidAmounts.join(
+          ", "
+        )}`,
+      });
+    }
 
     const bidderInfo = {
       fullName,
       phoneNumber,
       email,
-      // depositReceipt: depositReceiptImage,
     };
 
-    // if (product.bidHistory.length >= 1) {
-    //   // Send email to previous bidders
-    //   const previousBidders = product.bidHistory.map(
-    //     (bid) => bid.bidderInfo.email
-    //   );
-    //   const emailSubject = `New Bid Added for ${product.name}`;
-    //   const emailHTML = `
-    //   <p>Hello,</p>
-    //   <p>A new bid has been added for ${product.name}.</p>
-    //   <p>Details:</p>
-    //   <ul>
-    //     <li>Bidder Name: ${fullName}</li>
-    //     <li>Bid Price: ${price}</li>
-    //     <li>Link Price: ${process.env.FRONTEND_LINK}/products/${product._id}</li>
-    //   </ul>
-    //   <p>Thank you!</p>
-    // `;
+    // Calculate the new current bid
+    const newCurrentBid = product.auction.currentBid
+      ? product.auction.currentBid + price
+      : product.price + price;
 
-    //   // Send emails to previous bidders
-    //   const mailOptions = {
-    //     from: process.env.NODEMAILER_EMAIL,
-    //     to: previousBidders.join(", "),
-    //     subject: emailSubject,
-    //     html: emailHTML,
-    //   };
+    if (product.bidHistory.length >= 1) {
+      // Collect previous bidders' emails, ensuring no repetition and only valid emails
+      const previousBidders = new Set(
+        product.bidHistory
+          .map((bid) => bid.bidderInfo.email)
+          .filter((bidEmail) => bidEmail && bidEmail !== email)
+      );
 
-    //   // Send email using the transporter
-    //   await transporter.sendMail(mailOptions);
-    // }
-    
+      if (previousBidders.size > 0) {
+        const emailSubject = `New Bid Added for ${product.name}`;
+        const emailHTML = `
+          <p>Hello,</p>
+          <p>A new bid has been added for ${product.name}.</p>
+          <p>Details:</p>
+          <ul>
+            <li>Bidder Name: ${fullName}</li>
+            <li>Bid Price: ${price}</li>
+            <li>Link: ${process.env.FRONTEND_LINK}/products/${product._id}</li>
+          </ul>
+          <p>Thank you!</p>
+        `;
+
+        // Send emails to previous bidders
+        const mailOptions = {
+          from: process.env.NODEMAILER_EMAIL,
+          to: Array.from(previousBidders).join(", "),
+          subject: emailSubject,
+          html: emailHTML,
+        };
+
+        // Send email using the transporter
+        await transporter.sendMail(mailOptions);
+      }
+    }
+
     // Add new bid to bidHistory
     product.bidHistory.push({ price, bidderInfo });
 
-    // Update currentBid with the largest price in bidHistory
-    const highestBid = Math.max(...product.bidHistory.map((bid) => bid.price));
-    product.auction.currentBid = highestBid;
+    // Update currentBid
+    product.auction.currentBid = newCurrentBid;
 
     // Save the updated product
     await product.save();
@@ -438,6 +440,7 @@ router.post("/add-bid/:id", async (req, res) => {
       },
     });
   } catch (error) {
+    console.error("Error adding bid:", error);
     res.status(400).json({
       status: "fail",
       message: error.message,

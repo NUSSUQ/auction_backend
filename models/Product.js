@@ -17,19 +17,17 @@ const bidSchema = new mongoose.Schema({
     },
     email: {
       type: String,
-      // required: [true, "Email is required"],
       validate: {
         validator: validator.isEmail,
         message: (props) => `${props.value} is not a valid email!`,
       },
     },
+    //  not required
     depositReceipt: {
       url: {
-        // required: [true, "depositReceipt url is required"],
         type: String,
       },
       public_id: {
-        // required: [true, "depositReceipt public_id is required"],
         type: String,
       },
     },
@@ -94,16 +92,15 @@ const productSchema = new mongoose.Schema(
         required: [true, "Auction end time is required"],
         index: true,
       },
-      startingBid: {
-        type: Number,
-        required: [true, "Starting bid is required"],
-        min: [0, "Starting bid must be a positive number"],
-      },
       currentBid: {
         type: Number,
         default: 0,
         min: [0, "Current bid must be a positive number"],
       },
+    },
+    allowedBidAmounts: {
+      type: [Number],
+      default: [500, 1000],
     },
     bidHistory: [bidSchema],
     status: {
