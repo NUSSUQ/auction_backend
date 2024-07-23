@@ -381,13 +381,13 @@ router.post("/add-bid/:id", async (req, res) => {
     const bidderInfo = {
       fullName,
       phoneNumber,
-      email,
+      ...(email ? { email } : {}),
     };
 
     // Calculate the new current bid
     const newCurrentBid = product.auction.currentBid
-      ? product.auction.currentBid + price
-      : product.price + price;
+      ? parseInt(product.auction.currentBid) + parseInt(price)
+      : parseInt(product.price) + parseInt(price);
 
     if (product.bidHistory.length >= 1) {
       // Collect previous bidders' emails, ensuring no repetition and only valid emails
