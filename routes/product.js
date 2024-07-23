@@ -465,7 +465,7 @@ router.post("/add-bid/:id", async (req, res) => {
               <p>مرحباً،</p>
               <p>تمت إضافة مزايدة جديدة على المنتج ${product.name}.</p>
               <p>التفاصيل:</p>
-              <table class="details-table">s
+              <table class="details-table">
                 <tr>
                   <th>سعر المزايدة</th>
                   <td>${newCurrentBid}</td>
