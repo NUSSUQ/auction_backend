@@ -398,18 +398,92 @@ router.post("/add-bid/:id", async (req, res) => {
       );
 
       if (previousBidders.size > 0) {
-        const emailSubject = `New Bid Added for ${product.name}`;
+        const emailSubject = `إضافة مزايدة جديدة على ${product.name}`;
         const emailHTML = `
-          <p>Hello,</p>
-          <p>A new bid has been added for ${product.name}.</p>
-          <p>Details:</p>
-          <ul>
-            <li>Bidder Name: ${fullName}</li>
-            <li>Bid Price: ${price}</li>
-            <li>Link: ${process.env.FRONTEND_LINK}/products/${product._id}</li>
-          </ul>
-          <p>Thank you!</p>
-        `;
+        <!DOCTYPE html>
+        <html lang="ar">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              background-color: #f4f4f4;
+              margin: 0;
+              padding: 0;
+              direction: rtl;
+              text-align: right;
+            }
+            .container {
+              width: 100%;
+              padding: 20px;
+              background-color: #ffffff;
+              box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+              margin: 20px auto;
+              max-width: 600px;
+            }
+            .header {
+              background-color: #4CAF50;
+              color: white;
+              padding: 10px;
+              text-align: center;
+            }
+            .content {
+              padding: 20px;
+            }
+            .details-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin: 20px 0;
+            }
+            .details-table th, .details-table td {
+              border: 1px solid #ddd;
+              padding: 10px;
+            }
+            .details-table th {
+              background-color: #f2f2f2;
+              text-align: right;
+            }
+            .footer {
+              text-align: center;
+              padding: 10px;
+              color: #777;
+              font-size: 12px;
+            }
+            a {
+              color: #4CAF50;
+              text-decoration: none;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>إضافة مزايدة جديدة</h1>
+            </div>
+            <div class="content">
+              <p>مرحباً،</p>
+              <p>تمت إضافة مزايدة جديدة على المنتج ${product.name}.</p>
+              <p>التفاصيل:</p>
+              <table class="details-table">s
+                <tr>
+                  <th>سعر المزايدة</th>
+                  <td>${newCurrentBid}</td>
+                </tr>
+                <tr>
+                  <th>الرابط</th>
+                  <td><a href="https://www.gelnr1.com/products/${product._id}">${product.name}.</a></td>
+                </tr>
+              </table>
+              <p>شكراً لكم!</p>
+            </div>
+            <div class="footer">
+              <p>&copy; 2024 Gelnr. جميع الحقوق محفوظة.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
 
         // Send emails to previous bidders
         const mailOptions = {
