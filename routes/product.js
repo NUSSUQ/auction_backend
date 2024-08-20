@@ -4,7 +4,8 @@ const Product = require("../models/Product");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const cloudinary = require("cloudinary").v2;
-const nodemailer = require("nodemailer");
+// const nodemailer = require("nodemailer");
+const twilio = require("twilio");
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -12,13 +13,19 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.NODEMAILER_EMAIL,
-    pass: process.env.NODEMAILER_PASSWORD,
-  },
-});
+// const transporter = nodemailer.createTransport({
+//   service: "gmail",
+//   auth: {
+//     user: process.env.NODEMAILER_EMAIL,
+//     pass: process.env.NODEMAILER_PASSWORD,
+//   },
+// });
+
+// Initialize Twilio client
+const client = twilio(
+  process.env.TWILIO_ACCOUNT_SID,
+  process.env.TWILIO_AUTH_TOKEN
+);
 
 // Function to delete files from Cloudinary
 const deleteFiles = async (files) => {
@@ -390,111 +397,28 @@ router.post("/add-bid/:id", async (req, res) => {
       : parseInt(product.price) + parseInt(price);
 
     if (product.bidHistory.length >= 1) {
-      // Collect previous bidders' emails, ensuring no repetition and only valid emails
+      // Collect previous bidders' phone numbers, ensuring no repetition
       const previousBidders = new Set(
         product.bidHistory
-          .map((bid) => bid.bidderInfo.email)
-          .filter((bidEmail) => bidEmail && bidEmail !== email)
+          .map((bid) => bid.bidderInfo.phoneNumber)
+          .filter((bidPhone) => bidPhone && bidPhone !== phoneNumber)
       );
 
       if (previousBidders.size > 0) {
-        const emailSubject = `إضافة مزايدة جديدة على ${product.name}`;
-        const emailHTML = `
-        <!DOCTYPE html>
-        <html lang="ar">
-        <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <style>
-            body {
-              font-family: Arial, sans-serif;
-              background-color: #f4f4f4;
-              margin: 0;
-              padding: 0;
-              direction: rtl;
-              text-align: right;
-            }
-            .container {
-              width: 100%;
-              padding: 20px;
-              background-color: #ffffff;
-              box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-              margin: 20px auto;
-              max-width: 600px;
-            }
-            .header {
-              background-color: #4CAF50;
-              color: white;
-              padding: 10px;
-              text-align: center;
-            }
-            .content {
-              padding: 20px;
-            }
-            .details-table {
-              width: 100%;
-              border-collapse: collapse;
-              margin: 20px 0;
-            }
-            .details-table th, .details-table td {
-              border: 1px solid #ddd;
-              padding: 10px;
-            }
-            .details-table th {
-              background-color: #f2f2f2;
-              text-align: right;
-            }
-            .footer {
-              text-align: center;
-              padding: 10px;
-              color: #777;
-              font-size: 12px;
-            }
-            a {
-              color: #4CAF50;
-              text-decoration: none;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>إضافة مزايدة جديدة</h1>
-            </div>
-            <div class="content">
-              <p>مرحباً،</p>
-              <p>تمت إضافة مزايدة جديدة على المنتج ${product.name}.</p>
-              <p>التفاصيل:</p>
-              <table class="details-table">
-                <tr>
-                  <th>سعر المزايدة</th>
-                  <td>${newCurrentBid}</td>
-                </tr>
-                <tr>
-                  <th>الرابط</th>
-                  <td><a href="https://www.gelnr1.com/products/${product._id}">${product.name}.</a></td>
-                </tr>
-              </table>
-              <p>شكراً لكم!</p>
-            </div>
-            <div class="footer">
-              <p>&copy; 2024 Gelnr. جميع الحقوق محفوظة.</p>
-            </div>
-          </div>
-        </body>
-        </html>
-      `;
+        const smsMessage = `تمت إضافة مزايدة جديدة على ${product.name}. السعر الحالي: ${newCurrentBid}. رابط المنتج: https://www.gelnr1.com/products/${product._id}`;
 
-        // Send emails to previous bidders
-        const mailOptions = {
-          from: process.env.NODEMAILER_EMAIL,
-          to: Array.from(previousBidders).join(", "),
-          subject: emailSubject,
-          html: emailHTML,
-        };
-
-        // Send email using the transporter
-        await transporter.sendMail(mailOptions);
+        // Send SMS to previous bidders
+        Array.from(previousBidders).forEach(async (phone) => {
+          try {
+            await client.messages.create({
+              body: smsMessage,
+              from: process.env.TWILIO_PHONE_NUMBER,
+              to: phone,
+            });
+          } catch (smsError) {
+            console.error("Error sending SMS:", smsError);
+          }
+        });
       }
     }
 
@@ -523,3 +447,112 @@ router.post("/add-bid/:id", async (req, res) => {
 });
 
 module.exports = router;
+
+// if (product.bidHistory.length >= 1) {
+//   // Collect previous bidders' emails, ensuring no repetition and only valid emails
+//   const previousBidders = new Set(
+//     product.bidHistory
+//       .map((bid) => bid.bidderInfo.email)
+//       .filter((bidEmail) => bidEmail && bidEmail !== email)
+//   );
+
+//   if (previousBidders.size > 0) {
+//     const emailSubject = `إضافة مزايدة جديدة على ${product.name}`;
+//     const emailHTML = `
+//         <!DOCTYPE html>
+//         <html lang="ar">
+//         <head>
+//           <meta charset="UTF-8">
+//           <meta name="viewport" content="width=device-width, initial-scale=1.0">
+//           <style>
+//             body {
+//               font-family: Arial, sans-serif;
+//               background-color: #f4f4f4;
+//               margin: 0;
+//               padding: 0;
+//               direction: rtl;
+//               text-align: right;
+//             }
+//             .container {
+//               width: 100%;
+//               padding: 20px;
+//               background-color: #ffffff;
+//               box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+//               margin: 20px auto;
+//               max-width: 600px;
+//             }
+//             .header {
+//               background-color: #4CAF50;
+//               color: white;
+//               padding: 10px;
+//               text-align: center;
+//             }
+//             .content {
+//               padding: 20px;
+//             }
+//             .details-table {
+//               width: 100%;
+//               border-collapse: collapse;
+//               margin: 20px 0;
+//             }
+//             .details-table th, .details-table td {
+//               border: 1px solid #ddd;
+//               padding: 10px;
+//             }
+//             .details-table th {
+//               background-color: #f2f2f2;
+//               text-align: right;
+//             }
+//             .footer {
+//               text-align: center;
+//               padding: 10px;
+//               color: #777;
+//               font-size: 12px;
+//             }
+//             a {
+//               color: #4CAF50;
+//               text-decoration: none;
+//             }
+//           </style>
+//         </head>
+//         <body>
+//           <div class="container">
+//             <div class="header">
+//               <h1>إضافة مزايدة جديدة</h1>
+//             </div>
+//             <div class="content">
+//               <p>مرحباً،</p>
+//               <p>تمت إضافة مزايدة جديدة على المنتج ${product.name}.</p>
+//               <p>التفاصيل:</p>
+//               <table class="details-table">
+//                 <tr>
+//                   <th>سعر المزايدة</th>
+//                   <td>${newCurrentBid}</td>
+//                 </tr>
+//                 <tr>
+//                   <th>الرابط</th>
+//                   <td><a href="https://www.gelnr1.com/products/${product._id}">${product.name}.</a></td>
+//                 </tr>
+//               </table>
+//               <p>شكراً لكم!</p>
+//             </div>
+//             <div class="footer">
+//               <p>&copy; 2024 Gelnr. جميع الحقوق محفوظة.</p>
+//             </div>
+//           </div>
+//         </body>
+//         </html>
+//       `;
+
+//     // Send emails to previous bidders
+//     const mailOptions = {
+//       from: process.env.NODEMAILER_EMAIL,
+//       to: Array.from(previousBidders).join(", "),
+//       subject: emailSubject,
+//       html: emailHTML,
+//     };
+
+//     // Send email using the transporter
+//     await transporter.sendMail(mailOptions);
+//   }
+// }
