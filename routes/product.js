@@ -421,7 +421,7 @@ router.post('/add-bid/:id', async (req, res) => {
 				const lastEligibleBidder = eligibleBidders[eligibleBidders.length - 1];
 				const lastBidderPhone = lastEligibleBidder.bidderInfo.phoneNumber;
 
-				const smsMessage = `عزيزي العميل لم تعد صاحب أعلى مبلغ في المزاد https://glner1.com/products/${product._id}`;
+				const smsMessage = `عزيزي العميل لم تعد صاحب أعلى مبلغ في المزاد https://www.gelnr1.com/products/${product._id}`;
 
 				// Send SMS to the last eligible bidder
 				try {
