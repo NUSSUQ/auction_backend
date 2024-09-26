@@ -15,15 +15,23 @@ cloudinary.config({
 // Function to send SMS using api.oursms.com
 const sendSMS = async (to, message) => {
 	try {
-		const response = await axios.post('https://api.oursms.com/sms/send', {
-			apiKey: process.env.OURS_SMS_API_KEY,
-			numbers: to,
-			sender: process.env.OURS_SMS_SENDER_NAME,
-			message: message,
-		});
+		const response = await axios.post(
+			'https://api.oursms.com/msgs/sms',
+			{
+				src: process.env.OURS_SMS_SENDER_NAME,
+				dests: [to],
+				body: message,
+			},
+			{
+				headers: {
+					Authorization: `Bearer ${process.env.OURS_SMS_API_KEY}`,
+					'Content-Type': 'application/json',
+				},
+			},
+		);
 		return response.data;
 	} catch (error) {
-		console.error('Error sending SMS:', error);
+		console.error('Error sending SMS:', error.response?.data || error.message);
 		throw new Error('Failed to send SMS');
 	}
 };
@@ -362,85 +370,85 @@ router.get('/:id', async (req, res) => {
 });
 
 // Function to handle new bid notification with SMS
-router.post("/add-bid/:id", async (req, res) => {
-  try {
-    const productId = req.params.id;
-    const { bidPrice: price, fullName, phoneNumber } = req.body;
+router.post('/add-bid/:id', async (req, res) => {
+	try {
+		const productId = req.params.id;
+		const { bidPrice: price, fullName, phoneNumber } = req.body;
 
-    // Find the product by ID
-    let product = await Product.findById(productId);
+		// Find the product by ID
+		let product = await Product.findById(productId);
 
-    if (!product) {
-      return res.status(404).json({
-        status: "fail",
-        message: "Product not found",
-      });
-    }
+		if (!product) {
+			return res.status(404).json({
+				status: 'fail',
+				message: 'Product not found',
+			});
+		}
 
-    // Check if the bid amount is allowed
-    if (!product.allowedBidAmounts.includes(price)) {
-      return res.status(400).json({
-        status: "fail",
-        message: `Bid amount must be one of the following: ${product.allowedBidAmounts.join(
-          ", "
-        )}`,
-      });
-    }
+		// Check if the bid amount is allowed
+		if (!product.allowedBidAmounts.includes(price)) {
+			return res.status(400).json({
+				status: 'fail',
+				message: `Bid amount must be one of the following: ${product.allowedBidAmounts.join(
+					', ',
+				)}`,
+			});
+		}
 
-    const bidderInfo = {
-      fullName,
-      phoneNumber,
-    };
+		const bidderInfo = {
+			fullName,
+			phoneNumber,
+		};
 
-    // Calculate the new current bid
-    const newCurrentBid = product.auction.currentBid
-      ? parseInt(product.auction.currentBid) + parseInt(price)
-      : parseInt(product.price) + parseInt(price);
+		// Calculate the new current bid
+		const newCurrentBid = product.auction.currentBid
+			? parseInt(product.auction.currentBid) + parseInt(price)
+			: parseInt(product.price) + parseInt(price);
 
-    if (product.bidHistory.length >= 1) {
-      // Collect previous bidders' phone numbers, ensuring no repetition
-      const previousBidders = new Set(
-        product.bidHistory
-          .map((bid) => bid.bidderInfo.phoneNumber)
-          .filter((bidPhone) => bidPhone && bidPhone !== phoneNumber)
-      );
+		if (product.bidHistory.length >= 1) {
+			// Collect previous bidders' phone numbers, ensuring no repetition
+			const previousBidders = new Set(
+				product.bidHistory
+					.map(bid => bid.bidderInfo.phoneNumber)
+					.filter(bidPhone => bidPhone && bidPhone !== phoneNumber),
+			);
 
-      if (previousBidders.size > 0) {
-        const smsMessage = `New bid placed on ${product.name}. Current price: ${newCurrentBid}. Product link: https://glner1.com/products/${product._id}`;
+			if (previousBidders.size > 0) {
+				const smsMessage = `New bid placed on ${product.name}. Current price: ${newCurrentBid}. Product link: https://glner1.com/products/${product._id}`;
 
-        // Send SMS to previous bidders using api.oursms.com
-        Array.from(previousBidders).forEach(async (phone) => {
-          try {
-            await sendSMS(phone, smsMessage);
-          } catch (smsError) {
-            console.error("Error sending SMS:", smsError);
-          }
-        });
-      }
-    }
+				// Send SMS to previous bidders using api.oursms.com
+				Array.from(previousBidders).forEach(async phone => {
+					try {
+						await sendSMS(phone, smsMessage);
+					} catch (smsError) {
+						console.error('Error sending SMS:', smsError);
+					}
+				});
+			}
+		}
 
-    // Add new bid to bidHistory
-    product.bidHistory.push({ price, bidderInfo });
+		// Add new bid to bidHistory
+		product.bidHistory.push({ price, bidderInfo });
 
-    // Update currentBid
-    product.auction.currentBid = newCurrentBid;
+		// Update currentBid
+		product.auction.currentBid = newCurrentBid;
 
-    // Save the updated product
-    await product.save();
+		// Save the updated product
+		await product.save();
 
-    res.status(200).json({
-      status: "success",
-      data: {
-        product: product,
-      },
-    });
-  } catch (error) {
-    console.error("Error adding bid:", error);
-    res.status(400).json({
-      status: "fail",
-      message: error.message,
-    });
-  }
+		res.status(200).json({
+			status: 'success',
+			data: {
+				product: product,
+			},
+		});
+	} catch (error) {
+		console.error('Error adding bid:', error);
+		res.status(400).json({
+			status: 'fail',
+			message: error.message,
+		});
+	}
 });
 
 module.exports = router;
