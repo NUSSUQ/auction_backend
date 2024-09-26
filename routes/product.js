@@ -412,10 +412,9 @@ router.post('/add-bid/:id', async (req, res) => {
 					bid =>
 						bid.bidderInfo.phoneNumber &&
 						bid.bidderInfo.phoneNumber !== phoneNumber,
-				) // Filter valid phone numbers, excluding the new bidder
-				.filter(bid => bid.price < newCurrentBid) // Filter only those who bid lower than the new bid
-				.sort((a, b) => b.price - a.price); // Sort descending by bid price (highest bid first)
-
+				)
+				.filter(bid => bid.price < price)
+				.sort((a, b) => b.price - a.price);
 			// Get the last eligible bidder who placed the highest bid under the new bid
 			if (eligibleBidders.length > 0) {
 				const lastEligibleBidder = eligibleBidders[eligibleBidders.length - 1];
