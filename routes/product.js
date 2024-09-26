@@ -3,6 +3,7 @@ const router = express.Router();
 const Product = require('../models/Product');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const { default: axios } = require('axios');
 const cloudinary = require('cloudinary').v2;
 
 cloudinary.config({
