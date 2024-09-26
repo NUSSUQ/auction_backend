@@ -406,24 +406,30 @@ router.post('/add-bid/:id', async (req, res) => {
 			: parseInt(product.price) + parseInt(price);
 
 		if (product.bidHistory.length >= 1) {
-			// Collect previous bidders' phone numbers, ensuring no repetition
-			const previousBidders = new Set(
-				product.bidHistory
-					.map(bid => bid.bidderInfo.phoneNumber)
-					.filter(bidPhone => bidPhone && bidPhone !== phoneNumber),
-			);
+			// Collect previous bidders who placed bids lower than the new current bid
+			const eligibleBidders = product.bidHistory
+				.filter(
+					bid =>
+						bid.bidderInfo.phoneNumber &&
+						bid.bidderInfo.phoneNumber !== phoneNumber,
+				) // Filter valid phone numbers, excluding the new bidder
+				.filter(bid => bid.price < newCurrentBid) // Filter only those who bid lower than the new bid
+				.sort((a, b) => b.price - a.price); // Sort descending by bid price (highest bid first)
 
-			if (previousBidders.size > 0) {
-				const smsMessage = `New bid placed on ${product.name}. Current price: ${newCurrentBid}. Product link: https://glner1.com/products/${product._id}`;
+			// Get the last eligible bidder who placed the highest bid under the new bid
+			if (eligibleBidders.length > 0) {
+				const lastEligibleBidder = eligibleBidders[eligibleBidders.length - 1];
+				const lastBidderPhone = lastEligibleBidder.bidderInfo.phoneNumber;
 
-				// Send SMS to previous bidders using api.oursms.com
-				Array.from(previousBidders).forEach(async phone => {
-					try {
-						await sendSMS(phone, smsMessage);
-					} catch (smsError) {
-						console.error('Error sending SMS:', smsError);
-					}
-				});
+				const smsMessage = `عزيزي العميل لم تعد صاحب أعلي مبلغ في المزاد https://glner1.com/products/${product._id}`;
+
+				// Send SMS to the last eligible bidder
+				try {
+					await sendSMS(lastBidderPhone, smsMessage);
+					console.log(`SMS sent to ${lastBidderPhone}`);
+				} catch (smsError) {
+					console.error('Error sending SMS to last eligible bidder:', smsError);
+				}
 			}
 		}
 
