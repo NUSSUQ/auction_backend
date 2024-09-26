@@ -4,20 +4,12 @@ const Product = require('../models/Product');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const cloudinary = require('cloudinary').v2;
-// const nodemailer = require("nodemailer");
-const twilio = require('twilio');
 
 cloudinary.config({
 	cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
 	api_key: process.env.CLOUDINARY_API_KEY,
 	api_secret: process.env.CLOUDINARY_API_SECRET,
 });
-
-// Initialize Twilio client
-const client = twilio(
-	process.env.TWILIO_ACCOUNT_SID,
-	process.env.TWILIO_AUTH_TOKEN,
-);
 
 // Function to send SMS using api.oursms.com
 const sendSMS = async (to, message) => {
